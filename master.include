@@ -1,0 +1,57 @@
+#!/bin/bash
+
+declare -gA MASTER_IMPORT
+
+#echo "$BASH_SOURCE"
+#echo "$(readlink -f $BASH_SOURCE)"
+#echo "$(dirname $(readlink -f $BASH_SOURCE))"
+
+
+
+function import()
+{
+	[ $# -ge 1 ] || { echo "ERROR | sintassi $FUNCNAME nomefile|pathfile [ dir ]";	return 1; }
+	
+	local filename dirname path
+
+	if [ $# -eq 1 ]
+	then
+		dirname="$(dirname $(readlink -f $BASH_SOURCE))/modules"
+		filename="$(basename "$1")"
+		path="$dirname/$filename"
+	else
+		dirname="$2"
+		filename="$(basename "$1")"
+		path="$dirname/$filename"
+	fi
+	
+	if [ "${MASTER_IMPORT[$filename]}" == "$dirname" ]
+	then
+		warn "$path already sourced, skip"
+		return 0
+	fi
+	
+	[ -f "$path" ] || { echo "ERROR | $FUNCNAME | $path non trovato";	return 2; }
+	
+	. "$path" || { echo "ERROR | $FUNCNAME | errore durante il caricamento di $path";	return 2; }
+	
+	MASTER_IMPORT["$filename"]="$dirname"
+}
+
+function import_dump()
+{
+	local filename dirname path
+	
+	for filename in "${!MASTER_IMPORT[@]}"
+	do
+		dirname="${MASTER_IMPORT[$filename]}"
+		path="$dirname/$filename"
+		info "$path"
+	done
+}
+
+import logging.include
+import hash.include
+import lib.include
+
+import_dump

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+. modules/lib.include
+
+#info "prima di import $1 $2"
+#import $1 $2
+#info "dopo import $1 $2"

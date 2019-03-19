@@ -1,0 +1,383 @@
+#!/bin/bash
+#######################################################################################################################
+#
+#	inizializzo variabile globale di controllo sourcing
+#	gli script che hanno come prerequisito questo script devono controllare questa variabile
+#
+#__MIND0_DATADELETE_LOGGING_INCLUDE__=ok
+#
+#	se la variabile LOGFILE non e' definita la assegnamo
+#	temporaneamente a /dev/null per evitare righe doppie o files non gestiti
+#
+#######################################################################################################################
+#
+#	flag di debug
+#
+logginginclude_debug=false
+#
+#	redirige a /dev/null se logfile non specificato
+#
+[ ${LOGFILE:-UNDEFINED} == UNDEFINED ] && LOGFILE=/dev/null
+#
+#	hash di configurazione
+#
+declare -gA LOGGINGCONFIG
+#export LOGGINGCONFIG
+
+function logging_setconfig()
+{
+	[ $# -ge 2 ] || { error "sintassi $FUNCNAME option_key option_val";	return 1; }
+	
+	LOGGINGCONFIG[$1]="$2"
+	debug "LOGGINGCONFIG[$1]=$2"
+}
+
+function _logging_getconfig()
+{
+	[ $# -ge 1 ] || { error "sintassi $FUNCNAME option_key";	return 1; }
+	
+	if [ "${LOGGINGCONFIG[$1]:-OPTION_NOT_FOUND}" != "OPTION_NOT_FOUND" ]
+	then
+		echo "${LOGGINGCONFIG[$1]}"
+	else
+		return 1
+	fi
+}
+
+###################################################################################################################
+#
+# logging_setfile nomefile|pathfile [ dir ]
+#
+###################################################################################################################
+function logging_setfile()
+{
+	[ $# -ge 1 ] || { error "sintassi $FUNCNAME nomefile|pathfile [ dir ]";	return 1; }
+	
+	local logdir logfile logpath
+	if [ $# -eq 1 ]
+	then
+		logdir="$(dirname "$1")"
+		logfile="$(basename "$1")"
+		logpath="$logdir/$logfile"
+	else
+		logdir="$2"
+		logfile="$(basename "$1")"
+		logpath="$logdir/$logfile"
+	fi
+	
+	LOGFILE="$logpath"
+
+	debug "logdir=$logdir"
+	debug "logfile=$logfile"
+	debug "logpath=$logpath"
+	debug "LOGFILE=$LOGFILE"
+	
+	logging_setconfig log.dir	"$logdir"
+	logging_setconfig log.file	"$logfile"
+	logging_setconfig log.path	"$logpath"
+	logging_setconfig LOGFILE	"$LOGFILE"
+}
+#
+#	impostiamo debug a off
+#
+#LOGGINGCONFIG[DEBUG]=off
+#
+#	helpers debug
+#
+function logging_isdebug()			{	[ $logginginclude_debug == true ]; }
+function logging_debugenable()		{	logginginclude_debug=true; }
+function logging_debugdisable()		{	logginginclude_debug=false; }
+#
+#
+#
+declare -ga LOGGINGMESSAGES
+
+function logging_addmessage()
+{
+	[ $# -ge 1 ] || {
+		error "sintassi ${FUNCNAME[0]} messaggio"
+		return 1
+	}
+	
+	LOGGINGMESSAGES+=("$1")
+}
+function _logging_listmessages()
+{
+	for _message in "${LOGGINGMESSAGES[@]}"
+	do
+		printf "%s\n" "$_message"
+	done
+}
+
+#######################################################################################################################
+#
+#	logging_die	:	helper di logging_terminascript
+#				esegue la exit definitiva, successiva alla kill -USR1
+#				questo e' un trucco per poter uscire immediatamente dallo script
+#				all'interno di una funzione
+#
+#	sintassi:	logging_die exitcode loglevel
+#		dove:
+#				- exitcode	: codice di ritorno dallo script
+#				- log level	: livello di log per formattazione logging
+#
+#######################################################################################################################
+function logging_die()
+{
+	info "die $*"
+	local _level _exitcode
+	
+	_exitcode=$1
+	_level=$2
+
+	out "$_level" "termino script"
+	out "$_level" "ritorno errocode $1"
+	exit $_exitcode
+}
+#######################################################################################################################
+#
+#	logging_terminascript	: funzione di terminazione script che sfrutta la trap con segnale -USR1
+#
+#	sintassi		:	logging_terminascript [ -f function ] [ -l loglevel ] [ [ exitcode ] [ messaggio1 messaggio2 ... ] ]
+#		dove		:
+#						- -l loglevel	: opzionale, specifica un loglevel, default: FATAL
+#						- -f function	: opzionale, specifica una funzione SENZA argomenti da eseguire prima di terminare
+#						- exitcode		: opzionale, specifica un exitcode, default: 9 
+#						- messaggi		: opzionale, specifica uno o più righe di messaggio: default: ... 
+#											!richiede exitcode!
+#----------------------------------------------------------------------------------------------------------------------
+#	20190116 - aggiunto flag -f
+#######################################################################################################################
+function logging_terminascript()
+{
+	info "logging_terminascript $*"
+	local _level _exitcode _message 
+	local -a _armessage
+	local -a _arfunctions
+	#
+	#	uso getopts per gestire gli switch
+	#	
+	local opt OPTIND OPTARG
+	_level=FATAL
+	while getopts ":l:f:" opt
+	do
+		case $opt in
+			l)
+				#
+				#	specifica un loglevel  diverso da fatal
+				#
+				_level=$OPTARG
+				logging_varout "-l _level" $_level
+			;;
+			f)
+				#
+				#	specifica una funzione da aggiungere alla lista di funzioni da eseguire
+				#
+				_arfunctions+=($OPTARG)
+				logging_varout "+cleanup function" $OPTARG
+			;;
+		esac
+	done
+	shift "$((OPTIND-1))"
+	#
+	#	se specificati rimangono solo i parametri posizionali
+	#
+	logging_varout "positional arguments" "$*"
+	#
+	#	consumo exitcode
+	#
+	[ $# -ge 1 ] && _exitcode="$1" || _exitcode=9
+	shift
+	[ $_exitcode -eq 0 ] && _level=INFO
+	#
+	#	loggo tutti i messaggi
+	#	salvo i messaggi per mail
+	#
+	for _arg
+	do
+		out "$_level" "$_arg"
+		logging_addmessage "$_arg"
+	done
+	#
+	#	eseguo le eventuali funzioni di cleanup registrate
+	#
+	for fn in ${_arfunctions[@]}
+	do
+		info "cleanup function : $fn"
+		$fn
+	done
+	#
+	#	come ultimo loggo messaggio default
+	#
+	[ $_exitcode -eq 0 ] && {
+		out "$_level" "$(basename $0) TERMINATO IN MODO INASPETTATO"
+	} || {
+		info "$(basename $0) TERMINATO CORRETTAMENTE"
+	}
+	info "rimuovo trap EXIT per evitare ricorsione"
+	trap '' EXIT
+	#
+	#	registro l'handelr del segnale
+	#
+	info "trap logging_die $_exitcode $_level USR1"
+	trap "logging_die $_exitcode $_level" USR1
+	#
+	#	mando mail
+	#
+	#mail_send $_exitcode
+	#
+	#	scateno segnale, quindi chiamo logging_die
+	#
+	info "kill -s USR1 $$"
+	kill -s USR1 $$
+}
+#######################################################################################################################
+# _logging_timestamp	:	genera un timestamp con formato coerente da usare nei log
+#	sintassi	:	$( _logging_timestamp )
+#######################################################################################################################
+function _logging_timestamp ()
+{
+    echo $(date '+%d/%m/%Y %H:%M:%S')
+}
+#######################################################################################################################
+#	out		:	emette output formattato sia su logfile che su stderr (per non interferire con altri output)
+#	sintassi:	out {LOGLEVEL} {MESSAGGIO}
+#				normalmente vengono usati gli helper/aliases
+#
+#######################################################################################################################
+
+function out ()
+{
+# Parametro 1 : livello log INFO | WARNING | ERROR | CRITICAL | FATAL
+# Parametro * : Messaggio 
+  local codice_errore=$1
+  shift
+  #echo "$(_logging_timestamp) | $(basename $0) | $(printf "%-13.13s" ${FUNCNAME[2]}) | ${codice_errore} | ${@}" | tee -a "${LOGFILE}" >&2
+  #echo echo "\$(_logging_timestamp) | \$(basename $0) | \$(printf "%-*.*s" ${LOGGINGCONFIG[FUNCNAMEWIDTH]} ${LOGGINGCONFIG[FUNCNAMEWIDTH]} ${FUNCNAME[2]}) | \$(printf "%-*.*s" ${LOGGINGCONFIG[LOGLEVELWIDTH]} ${LOGGINGCONFIG[LOGLEVELWIDTH]} ${codice_errore}) | ${@}" |& tee -a "${LOGFILE}" >&2
+  echo "$(_logging_timestamp) | $(basename $0) | $(printf "%-*.*s" ${LOGGINGCONFIG[FUNCNAMEWIDTH]} ${LOGGINGCONFIG[FUNCNAMEWIDTH]} ${FUNCNAME[2]}) | $(printf "%-*.*s" ${LOGGINGCONFIG[LOGLEVELWIDTH]} ${LOGGINGCONFIG[LOGLEVELWIDTH]} ${codice_errore}) | ${@}" |& tee -a "${LOGFILE}" >&2
+}
+#######################################################################################################################
+#	log		:	emette output formattato sia su logfile che su stderr (per non interferire con altri output)
+#	sintassi:	log $LOGLEVEL $MESSAGGIO
+#######################################################################################################################
+function log ()
+{
+# Parametro 1 : livello log INFO | WARNING | ERROR | CRITICAL | FATAL
+# Parametro * : Messaggio 
+  local codice_errore=$1
+  shift
+  echo "$(_logging_timestamp) | $(basename $0) | $(printf "%-*.*s" ${LOGGINGCONFIG[FUNCNAMEWIDTH]} ${LOGGINGCONFIG[FUNCNAMEWIDTH]} ${FUNCNAME[2]}) | $(printf "%-*.*s" ${LOGGINGCONFIG[LOGLEVELWIDTH]} ${LOGGINGCONFIG[LOGLEVELWIDTH]} ${codice_errore}) | ${@}" >> "${LOGFILE}"
+}
+#######################################################################################################################
+# aliases di comodo:	chiamano out impostando il loglevel
+#######################################################################################################################
+function dbout ()
+{
+    out "DBOUT" "${@}"
+}
+#
+#	debug esegue output solo se debug e' attivo
+#
+function debug ()
+{
+	logging_isdebug && out "DEBUG" "${@}"
+}
+#
+function info ()
+{
+    out "INFO " "${@}"
+}
+#
+function warn ()
+{
+    out "WARN " "${@}"
+}
+#
+function error ()
+{
+    out "ERROR" "${@}"
+}
+#
+function fatal ()
+{
+    out "FATAL" "${@}"
+}
+#
+function envout()
+{
+    out "ENV  " "${@}"
+}
+#
+function critical ()
+{
+    fatal "${@}"
+}
+#######################################################################################################################
+#	logging_varout		: log variabili verso console/file con formato coerentee loglevel VAR
+#	sintassi	: logging_varout {var_name} {var_value}
+#	
+#######################################################################################################################
+function logging_varout()
+{
+	#
+	#	livello da usare nel logging
+	#	viene convertito in maiuscolo
+	#
+	local _level
+	#
+	#	nome valore/variabile
+	#
+	local _name="$1"
+	#
+	#	valore
+	#
+	local _value="$2"
+	#
+	#	messaggio finale in output
+	#
+	local _message
+	#
+	#	larghezza fissa campo contenente nome della variabile
+	#
+	local _width=40
+	#
+	#	formattazione messaggio
+	#
+	printf -v _message "%-*.*s : [%s]" $_width $_width "$_name" "$_value"
+	#
+	#	formattazione livello
+	#
+	printf -v _level "%-*.*s" ${LOGGINGCONFIG[LOGLEVELWIDTH]} ${LOGGINGCONFIG[LOGLEVELWIDTH]} "VAR"
+	#
+	out "$_level" "$_message"
+}
+
+###################################################################################################################
+#
+# eseguo test solo se chiamato direttamente
+#
+###################################################################################################################
+logging_setconfig LOGLEVELWIDTH 6
+logging_setconfig FUNCNAMEWIDTH 15
+
+[ "$0" == "$BASH_SOURCE" ] && {
+	logginginclude_debug=true
+	[ $# -ge 1 ] && logging_setfile "$@" || logging_setfile "$0.log"
+	
+	debug "script mode"
+	debug "debug"
+	info "info"
+	warn "warn"
+	error "error"
+	fatal "fatal"
+	envout "env"
+	critical "critical"
+	logging_varout "logginginclude_debug" "$logginginclude_debug"
+	dbout "dbout"
+	logging_terminascript 0 "ok"
+} || {
+	logging_setfile "$0.log"
+	#_logging_getconfig LOGLEVELWIDTH
+	#_logging_getconfig FUNCNAMEWIDTH
+	info "$(basename $BASH_SOURCE) loaded"
+}

@@ -1,0 +1,255 @@
+#!/bin/bash
+###################################################################################################################
+#
+#	modulo gestione array hash basato su riferimento indiretto
+#	http://ahmed.amayem.com/bash-indirect-expansion-exploration/
+#
+###################################################################################################################
+#
+#	hash di esempio
+#
+declare -A __testhash
+#
+#	flag di debug
+#
+hashinclude_debug=false
+
+import logging.include
+###################################################################################################################
+#
+# hash_addelement hashname key val
+#
+###################################################################################################################
+function hash_addelement()
+{
+	[ $# -ge 3 ] || { echo "ERROR | syntax $FUNCNAME hashname key val" >&2; exit 1; }
+	#
+	#	debug
+	#
+	$hashinclude_debug && {
+		debug "$FUNCNAME | DEBUG | \$1=$1"
+		debug "$FUNCNAME | DEBUG | \$2=$2"
+	}
+	#
+	# assegnazione
+	#
+	read ${1}"[$2]" <<< $3
+	#
+	#	debug
+	#
+	$hashinclude_debug && debug "----------------------------------------------"
+}
+###################################################################################################################
+#
+# hash_getelement hashname key val
+#
+###################################################################################################################
+function hash_haselement()
+{
+	[ $# -ge 2 ] || { echo "ERROR | syntax $FUNCNAME hashname key " >&2; exit 1; }
+	local elem val
+	#
+	#	debug
+	#
+	$hashinclude_debug && {
+		debug "$FUNCNAME | DEBUG | \$1=$1"
+		debug "$FUNCNAME | DEBUG | \$2=$2"
+	}
+	#
+	#	creo la stringa dell'elemento dell'hash
+	#
+	elem=$1[$2]
+	#
+	#	debug
+	#
+	$hashinclude_debug && {
+		debug "$FUNCNAME | DEBUG | elem=${elem}"
+		debug "$FUNCNAME | DEBUG | !elem=${!elem}"
+	}
+	#
+	#	verifico che la chiave esista e abbia un valore
+	#
+	if [ "${!elem:-hash_getelement_notfound}" == hash_getelement_notfound ]
+	then
+		#
+		#	debug
+		#
+		$hashinclude_debug && {
+			debug "$FUNCNAME | DEBUG | false"
+			debug "----------------------------------------------"
+		}
+		#
+		#	false
+		#
+		return 1 
+	else
+		#
+		#	debug
+		#
+		$hashinclude_debug && {
+			debug "$FUNCNAME | DEBUG | true"
+			debug "----------------------------------------------"
+		}
+		#
+		#	true
+		#
+		return 0
+	fi
+}
+###################################################################################################################
+#
+# $(_hash_getelement hashname key val)
+#
+###################################################################################################################
+function _hash_getelement()
+{
+	[ $# -ge 2 ] || { echo "ERROR | syntax $FUNCNAME hashname key " >&2; exit 1; }
+	local elem val
+	#
+	#	verifico che l'elemento esista
+	#
+	if hash_haselement $1 $2
+	then
+		#
+		#	creo la stringa dell'elemento dell'hash
+		#
+		elem=$1[$2]
+		#
+		#	assegno valore ottenuto per indirezione
+		#
+		#val="$(echo ${!elem})"
+		val="${!elem}"
+		#
+		#	output
+		#
+		echo "$val"
+		#
+		#	debug
+		#
+		$hashinclude_debug && debug "----------------------------------------------"
+		#
+		#	true
+		#
+		return 0
+	else
+		#
+		#	debug
+		#
+		$hashinclude_debug && debug"----------------------------------------------"
+		#
+		#	false
+		#
+		return 1
+	fi
+}
+###################################################################################################################
+#
+# $(_hash_listkeys hashname)
+#
+###################################################################################################################
+function _hash_listkeys()
+{
+	[ $# -ge 1 ] || { echo "ERROR | syntax $FUNCNAME hashname" >&2; exit 1; }
+	#
+	#	debug
+	#
+	$hashinclude_debug && {
+		debug "$FUNCNAME | DEBUG | \$1=$1"
+	}
+	#
+	#	trucco per dichiarare array
+	#	creo dinamicamente la stringa di assegnazione array (con !)
+	#
+	local -a 'arraykeys=("${!'"$1"'[@]}")'
+	#
+	#	debug
+	#
+	$hashinclude_debug && {
+		debug "$FUNCNAME | DEBUG | "'arraykeys=("${!'"$1"'[@]}")'
+	}
+	#
+	#	output array chiavi
+	#
+	echo ${arraykeys[*]}	
+	#
+	#	debug
+	#
+	$hashinclude_debug && debug "----------------------------------------------"
+}
+###################################################################################################################
+#
+# $(_hash_listvalues hashname)
+#
+###################################################################################################################
+function _hash_listvalues()
+{
+	[ $# -ge 1 ] || { echo "ERROR | syntax $FUNCNAME hashname" >&2; exit 1; }
+	#
+	#	trucco per dichiarare array
+	#	creo dinamicamente la stringa di assegnazione array  (senza !)
+	#
+	local -a 'arraykeys=("${'"$1"'[@]}")'
+	#
+	#	output array valori
+	#
+	echo ${arraykeys[*]}	
+	#
+	#	debug
+	#
+	$hashinclude_debug && debug "----------------------------------------------"
+}
+###################################################################################################################
+#
+# $(_hash_dump hashname)
+#
+###################################################################################################################
+function _hash_dump()
+{
+	[ $# -ge 1 ] || { echo "ERROR | syntax $FUNCNAME hashname" >&2; exit 1; }
+	local k elem
+	#
+	#	loop over output _hash_listkeys
+	#
+	for k in $(_hash_listkeys $1)
+	do
+		#
+		#	creo la stringa dell'elemento dell'hash
+		#
+		elem=$1[$k]
+		#
+		#	output chiave=valore
+		#
+		echo "$k=${!elem}"
+	done
+	$hashinclude_debug && echo "----------------------------------------------" >&2
+}
+###################################################################################################################
+#
+# eseguo test solo se chiamato direttamente
+#
+###################################################################################################################
+[ "$0" = "$BASH_SOURCE" ] && {
+	[ $# -ge 3 ] || { echo "ERROR | syntax $BASH_SOURCE hashname key val" >&2; exit 1; }
+	hashinclude_debug=true
+	echo "DEBUG | script mode"
+	echo "DEBUG | hash_addelement $@"
+	hash_addelement "$@"
+	echo "DEBUG | hash_addelement __testhash internal yeah"
+	hash_addelement __testhash internal yeah
+	echo "DEBUG | _hash_listkeys $1"
+	_hash_listkeys $1
+	echo "DEBUG | _hash_listvalues $1"
+	_hash_listvalues $1
+	echo "DEBUG | _hash_dump $1"
+	_hash_dump $1
+	echo "DEBUG | hash_haselement $1 $2"
+	hash_haselement $1 $2 && {
+		echo "DEBUG | $2 found"
+		echo "DEBUG | _hash_getelement $1 $2"
+		_hash_getelement $1 $2
+	} || {
+		echo "DEBUG | $2 not found"
+	}
+} || {
+	info "$(basename $BASH_SOURCE) loaded"
+}

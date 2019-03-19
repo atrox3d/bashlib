@@ -1,0 +1,163 @@
+#!/bin/bash
+################################################################################
+#
+#	lib_die:
+#		handler di uscita da script con errorlevel
+#
+################################################################################
+function lib_die()
+{
+	info "exit $1"
+	exit $1
+}
+################################################################################
+#
+#	lib_kill:
+#		termina lo scirpt anche da subshell
+#
+################################################################################
+function lib_kill()
+{
+	local pid=$(_lib_get PID)
+	#local exitcode=$1
+	#shift
+
+	#[ $exitcode -eq 0 ] && {
+	#	info "$*"
+	#	kill -s USR1 $pid 
+	#} || {
+	fatal "$*"
+	kill -s USR2 $pid
+	#}
+}
+################################################################################
+#
+#	lib_checkparamsnumber:
+#		utility di controllo nr param generalizzata
+#		controlla che il numero dei parametri passati sia maggiore o uguale
+#		al parametro min.
+#		in caso positivo ritorna 0
+#		in caso contrario visualizza msg_sintassi e ritorna 2
+#
+#	sintassi:
+#		lib_checkparamsnumber $min $msg_sintassi ${parametri_funzione[@]}
+#
+#			min					: numero minimo di parametri
+#			msg_sintassi		: messaggio di errore con sintassi corretta
+#			parametri_funzione	: tipicamente $@
+#
+################################################################################
+function lib_checkparamsnumber()
+{
+	local _min _syntax
+	#
+	#	controllo parametri di QUESTA funzione
+	#
+	[ $# -ge 2 ] || {
+		echo "ERROR | syntax $FUNCNAME min syntax params..."  > /dev/stderr
+		return 1
+	}
+	# inizializzo variabili
+	_min=$1
+	_syntax="$2"
+	#
+	# shift parametri, rimangono quelli della funzione da controllare
+	#
+	shift 2
+	#
+	#	check
+	#
+	[ $# -ge $_min ] || {
+		echo "ERROR | $_syntax" > /dev/stderr
+		return 2
+	}
+	return 0
+}
+################################################################################
+#
+#	lib_set:
+#		memorizza coppia chiave valore globale
+#
+################################################################################
+function lib_set()
+{
+	lib_checkparamsnumber 2 "syntax $FUNCNAME key val" "$@" || exit 1
+	
+	#if [ "${_LIB[$1]:-UNDEFINEDCONFIG}" == UNDEFINEDCONFIG ]
+	#then
+	#	_LIB_INDEX_+=("$1")
+	#fi
+	#_LIB["$1"]="$2"
+	if hash_haselement _LIB "$1"
+	then
+		_LIB_INDEX_+=("$1")
+	fi
+	hash_addelement _LIB "$1" "$2"
+}
+################################################################################
+#
+#	_lib_set:
+#		restituisce valore se chieve esistente
+#
+################################################################################
+function _lib_get()
+{
+	lib_checkparamsnumber 1 "syntax $FUNCNAME key " "$@" || exit 1
+	if [ "${_LIB[$1]:-_UNDEFINED_}" != _UNDEFINED_ ]
+	then
+		echo "${_LIB[$1]}"
+		return 0
+	else
+		echo ""
+		return 1
+	fi
+}
+declare -gA _LIB_IMPORT
+################################################################################
+#
+#	dichiarazione HASH, path lib
+#
+################################################################################
+declare -gA _LIB
+declare -ga _LIB_IDX
+################################################################################
+#
+#	source logging.include
+#
+################################################################################
+#echo "INFO | import logging.include"
+#. "$_LIB_dir/logging.include" || {
+#	lib_kill "impossibile caricare $_LIB_dir/logging.include"
+#}
+#info "ok"
+################################################################################
+#
+#	source hash.include
+#
+################################################################################
+#info "import hash.include"
+#. "$_LIB_dir/hash.include" || {
+#	lib_kill "impossibile caricare $_LIB_dir/hash.include"
+#}
+#info "ok"
+################################################################################
+#
+#	set variabili lib
+#
+################################################################################
+lib_set PID $$
+lib_set lib.dir "$_LIB_dir"
+################################################################################
+#
+#	trap exit
+#
+################################################################################
+#trap "lib_die 0" USR1
+trap "lib_die 1" USR2
+for t in "$(trap -p)"
+do
+	info "$(basename $BASH_SOURCE):	$t"
+done
+#
+#requires hash.includes
+info "$(basename $BASH_SOURCE) loaded"
