@@ -14,7 +14,7 @@ declare -A __testhash
 #
 hashinclude_debug=false
 
-import logging.include
+module_import logging.include
 ###################################################################################################################
 #
 # hash_addelement hashname key val

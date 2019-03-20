@@ -8,9 +8,9 @@ declare -gA MASTER_IMPORT
 
 
 
-function import()
+function module_import()
 {
-	[ $# -ge 1 ] || { echo "ERROR | sintassi $FUNCNAME nomefile|pathfile [ dir ]";	return 1; }
+	[ $# -ge 1 ] || { echo "ERROR | sintassi $FUNCNAME nomefile|pathfile [ dir ]";	exit 1; }
 	
 	local filename dirname path
 
@@ -50,8 +50,8 @@ function import_dump()
 	done
 }
 
-import logging.include
-import hash.include
-import lib.include
+module_import logging.include
+module_import hash.include
+module_import lib.include
 
 import_dump
