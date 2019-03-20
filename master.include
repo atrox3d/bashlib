@@ -30,6 +30,13 @@ function module_load()
 	local moduledir="$(cd $(dirname $BASH_SOURCE);pwd)/modules"
 	local modulepath="$1"
 	local modulename="${modulepath##*/}"
+
+	if hash_haselement MASTER_IMPORT "$modulename"
+	then
+		warn "file gia' caricato: $modulename"
+		return 0
+	fi
+
 	#
 	#	inutile procedere se file non esiste
 	#
@@ -54,12 +61,6 @@ function module_load()
 	fi
 	success "file trovato: $modulepath"
 	
-	if hash_haselement MASTER_IMPORT "$modulename"
-	then
-		warn "file gia' caricato: $modulename"
-	else
-		hash_addelement MASTER_IMPORT "$modulename" "${moduledir}"
-	fi
 	#
 	#	comincio a visualizzare cosa intendo caricare senza andare a capo
 	#
@@ -72,6 +73,7 @@ function module_load()
 		exit 2
 	}
 	#	visualizzo success di seguito
+	hash_addelement MASTER_IMPORT "$modulename" "${moduledir}"
 	success "file caricato : $modulepath"
 }
 
