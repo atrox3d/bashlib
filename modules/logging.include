@@ -273,7 +273,7 @@ function log ()
 #######################################################################################################################
 function dbout ()
 {
-    out "DBOUT" "${@}"
+    out DBOUT "${@}"
 }
 #
 #	debug esegue output solo se debug e' attivo
@@ -285,27 +285,42 @@ function debug ()
 #
 function info ()
 {
-    out "INFO " "${@}"
+    out INFO "${@}"
 }
 #
 function warn ()
 {
-    out "WARN " "${@}"
+    out WARN "${@}"
 }
 #
 function error ()
 {
-    out "ERROR" "${@}"
+    out ERROR "${@}"
 }
 #
 function fatal ()
 {
-    out "FATAL" "${@}"
+    out FATAL "${@}"
 }
 #
 function envout()
 {
-    out "ENV  " "${@}"
+    out ENV "${@}"
+}
+#
+function try()
+{
+    out TRY "${@}"
+}
+#
+function success()
+{
+    out SUCCESS "${@}"
+}
+#
+function fail()
+{
+    out FAIL"${@}"
 }
 #
 function critical ()
@@ -357,7 +372,7 @@ function logging_varout()
 # eseguo test solo se chiamato direttamente
 #
 ###################################################################################################################
-logging_setconfig LOGLEVELWIDTH 6
+logging_setconfig LOGLEVELWIDTH 8
 logging_setconfig FUNCNAMEWIDTH 15
 
 [ "$0" == "$BASH_SOURCE" ] && {
