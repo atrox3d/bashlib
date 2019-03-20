@@ -8,7 +8,11 @@ declare -gA MASTER_IMPORT
 
 function master_setup()
 {
-	local moduledir="$(cd $(dirname $0);pwd)/modules"
+	#echo "\$0=$0"
+	#echo "\$BASH_SOURCE=$BASH_SOURCE"
+	#echo "dirname \$BASH_SOURCE=$(dirname $BASH_SOURCE)"
+	#echo "$(cd $(dirname $BASH_SOURCE);pwd)"
+	local moduledir="$(cd $(dirname $BASH_SOURCE);pwd)/modules"
 	
 	. "${moduledir}/logging.include"	|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/logging.include";	return 1; }
 	. "${moduledir}/hash.include"		|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/hash.include";		return 2; }
@@ -20,7 +24,7 @@ master_setup || exit $?
 #
 function module_load()
 {
-	local moduledir="$(cd $(dirname $0);pwd)/modules"
+	local moduledir="$(cd $(dirname $BASH_SOURCE);pwd)/modules"
 	local modulepath="$1"
 	#
 	#	inutile procedere se file non esiste
