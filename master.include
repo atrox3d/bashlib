@@ -5,7 +5,6 @@ declare -gA MASTER_IMPORT
 #echo "$BASH_SOURCE"
 #echo "$(readlink -f $BASH_SOURCE)"
 #echo "$(dirname $(readlink -f $BASH_SOURCE))"
-
 function master_setup()
 {
 	#echo "\$0=$0"
@@ -17,10 +16,13 @@ function master_setup()
 	. "${moduledir}/logging.include"	|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/logging.include";	return 1; }
 	. "${moduledir}/hash.include"		|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/hash.include";		return 2; }
 	. "${moduledir}/lib.include"		|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/lib.include";		return 3; }
-	hash_addelement MASTER_IMPORT logging.include "${moduledir}"
-	hash_addelement MASTER_IMPORT hash.include "${moduledir}"
-	hash_addelement MASTER_IMPORT lib.include "${moduledir}"
+	hash_addelement MASTER_IMPORT logging.include	"${moduledir}"
+	hash_addelement MASTER_IMPORT hash.include		"${moduledir}"
+	hash_addelement MASTER_IMPORT lib.include		"${moduledir}"
 }
+#
+#	ci assicuriamo che le librerie di base siano caricate
+#
 master_setup || exit $?
 #
 #	helper di include scripts
@@ -47,7 +49,7 @@ function module_load()
 		modulepath="${moduledir}/${modulepath}"
 		warn "tento con : ${modulepath}"
 		#
-		#	fallback
+		#	fallback su modules/
 		#
 		[ -f "$modulepath" ] || {
 			fatal "file inesistente: $modulepath"
@@ -55,8 +57,7 @@ function module_load()
 			exit 1
 		}
 	else
-		:
-		# estrarre path
+		# estrazione path
 		moduledir="${modulepath%/*}"
 	fi
 	success "file trovato: $modulepath"
@@ -66,46 +67,13 @@ function module_load()
 	#
 	try "caricamento ${modulepath##*/}..."
 	. "$modulepath" &> /dev/null || {
-		# visualizzo FAIL Di seguito
-		#echo "FAIL"
 		fatal "impossibile eseguire sourcing ${modulepath##*/}"
 		fatal "termino script"
 		exit 2
 	}
-	#	visualizzo success di seguito
 	hash_addelement MASTER_IMPORT "$modulename" "${moduledir}"
 	success "file caricato : $modulepath"
 }
-
-#function module_load()
-#{
-#	[ $# -ge 1 ] || { echo "ERROR | sintassi $FUNCNAME nomefile|pathfile [ dir ]";	exit 1; }
-#	
-#	local filename dirname path
-#
-#	if [ $# -eq 1 ]
-#	then
-#		dirname="$(dirname $(readlink -f $BASH_SOURCE))/modules"
-#		filename="$(basename "$1")"
-#		path="$dirname/$filename"
-#	else
-#		dirname="$2"
-#		filename="$(basename "$1")"
-#		path="$dirname/$filename"
-#	fi
-#	
-#	if [ "${MASTER_IMPORT[$filename]}" == "$dirname" ]
-#	then
-#		warn "$path already sourced, skip"
-#		return 0
-#	fi
-#	
-#	[ -f "$path" ] || { echo "ERROR | $FUNCNAME | $path non trovato";	return 2; }
-#	
-#	. "$path" || { echo "ERROR | $FUNCNAME | errore durante il caricamento di $path";	return 2; }
-#	
-#	MASTER_IMPORT["$filename"]="$dirname"
-#}
 
 function import_dump()
 {
@@ -114,14 +82,12 @@ function import_dump()
 	for filename in "${!MASTER_IMPORT[@]}"
 	do
 		dirname="${MASTER_IMPORT[$filename]}"
-		#path="$dirname/$filename"
 		info "$filename $dirname"
 	done
 }
-
+#
 module_load logging.include
 module_load hash.include
 module_load lib.include
-#module_load ciao
 
 import_dump
