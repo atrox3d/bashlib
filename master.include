@@ -17,6 +17,9 @@ function master_setup()
 	. "${moduledir}/logging.include"	|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/logging.include";	return 1; }
 	. "${moduledir}/hash.include"		|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/hash.include";		return 2; }
 	. "${moduledir}/lib.include"		|| { echo "FATAL : impossibile caricare prerequisito  ${moduledir}/lib.include";		return 3; }
+	hash_addelement MASTER_IMPORT logging.include "${moduledir}"
+	hash_addelement MASTER_IMPORT hash.include "${moduledir}"
+	hash_addelement MASTER_IMPORT lib.include "${moduledir}"
 }
 master_setup || exit $?
 #
@@ -26,6 +29,7 @@ function module_load()
 {
 	local moduledir="$(cd $(dirname $BASH_SOURCE);pwd)/modules"
 	local modulepath="$1"
+	local modulename="${modulepath##*/}"
 	#
 	#	inutile procedere se file non esiste
 	#
@@ -43,8 +47,19 @@ function module_load()
 			fatal "impossibile continuare"
 			exit 1
 		}
+	else
+		:
+		# estrarre path
+		moduledir="${modulepath%/*}"
 	fi
 	success "file trovato: $modulepath"
+	
+	if hash_haselement MASTER_IMPORT "$modulename"
+	then
+		warn "file gia' caricato: $modulename"
+	else
+		hash_addelement MASTER_IMPORT "$modulename" "${moduledir}"
+	fi
 	#
 	#	comincio a visualizzare cosa intendo caricare senza andare a capo
 	#
@@ -97,8 +112,8 @@ function import_dump()
 	for filename in "${!MASTER_IMPORT[@]}"
 	do
 		dirname="${MASTER_IMPORT[$filename]}"
-		path="$dirname/$filename"
-		info "$path"
+		#path="$dirname/$filename"
+		info "$filename $dirname"
 	done
 }
 
