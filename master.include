@@ -75,7 +75,7 @@ function module_load()
 	success "file caricato : $modulepath"
 }
 
-function import_dump()
+function module_dump()
 {
 	local filename dirname path
 	
@@ -90,4 +90,4 @@ module_load logging.include
 module_load hash.include
 module_load lib.include
 
-import_dump
+module_dump
