@@ -1,6 +1,12 @@
 #!/bin/bash
 ################################################################################
 #
+#	questa libreria va inclusa da master.include"
+#
+################################################################################
+[ "$(type -t master_setup)" == function ] || { echo "FATAL | $BASH_SOURCE | use master.include"; exit 1; }
+################################################################################
+#
 #	lib_die:
 #		handler di uscita da script con errorlevel
 #
@@ -54,7 +60,7 @@ function lib_checkparamsnumber()
 	#	controllo parametri di QUESTA funzione
 	#
 	[ $# -ge 2 ] || {
-		echo "ERROR | syntax $FUNCNAME min syntax params..."  > /dev/stderr
+		error "syntax $FUNCNAME min syntax params..."  > /dev/stderr
 		return 1
 	}
 	# inizializzo variabili
@@ -68,7 +74,7 @@ function lib_checkparamsnumber()
 	#	check
 	#
 	[ $# -ge $_min ] || {
-		echo "ERROR | $_syntax" > /dev/stderr
+		error "$_syntax" > /dev/stderr
 		return 2
 	}
 	return 0
@@ -83,11 +89,6 @@ function lib_set()
 {
 	lib_checkparamsnumber 2 "syntax $FUNCNAME key val" "$@" || exit 1
 	
-	#if [ "${_LIB[$1]:-UNDEFINEDCONFIG}" == UNDEFINEDCONFIG ]
-	#then
-	#	_LIB_INDEX_+=("$1")
-	#fi
-	#_LIB["$1"]="$2"
 	if hash_haselement _LIB "$1"
 	then
 		_LIB_INDEX_+=("$1")
@@ -103,16 +104,16 @@ function lib_set()
 function _lib_get()
 {
 	lib_checkparamsnumber 1 "syntax $FUNCNAME key " "$@" || exit 1
-	if [ "${_LIB[$1]:-_UNDEFINED_}" != _UNDEFINED_ ]
-	then
-		echo "${_LIB[$1]}"
-		return 0
-	else
-		echo ""
-		return 1
-	fi
+	_hash_getelement _LIB "$1"
 }
-declare -gA _LIB_IMPORT
+
+
+function _lib_dump()
+{
+	#lib_checkparamsnumber 1 "syntax $FUNCNAME key " "$@" || exit 1
+	_hash_dump _LIB
+}
+
 ################################################################################
 #
 #	dichiarazione HASH, path lib
@@ -122,42 +123,20 @@ declare -gA _LIB
 declare -ga _LIB_IDX
 ################################################################################
 #
-#	source logging.include
-#
-################################################################################
-#echo "INFO | import logging.include"
-#. "$_LIB_dir/logging.include" || {
-#	lib_kill "impossibile caricare $_LIB_dir/logging.include"
-#}
-#info "ok"
-################################################################################
-#
-#	source hash.include
-#
-################################################################################
-#info "import hash.include"
-#. "$_LIB_dir/hash.include" || {
-#	lib_kill "impossibile caricare $_LIB_dir/hash.include"
-#}
-#info "ok"
-################################################################################
-#
 #	set variabili lib
 #
 ################################################################################
 lib_set PID $$
-lib_set lib.dir "$_LIB_dir"
+#lib_set lib.dir "$_LIB_dir"
 ################################################################################
 #
 #	trap exit
 #
 ################################################################################
-#trap "lib_die 0" USR1
 trap "lib_die 1" USR2
 for t in "$(trap -p)"
 do
 	info "$(basename $BASH_SOURCE):	$t"
 done
 #
-#requires hash.includes
 info "$(basename $BASH_SOURCE) loaded"

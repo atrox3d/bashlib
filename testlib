@@ -1,7 +1,26 @@
 #!/bin/bash
 
-. modules/lib.include
-
+#. modules/lib.include
 #info "prima di import $1 $2"
 #import $1 $2
 #info "dopo import $1 $2"
+
+. master.include
+
+lib_set a 5
+
+if val=$(_lib_get a)
+then
+	echo "ok: a=$val" 
+else
+	echo "ko:a not found"
+fi
+
+if val=$(_lib_get b)
+then
+	echo "ok: b=$val" 
+else
+	echo "ko: b not found"
+fi
+
+_lib_dump
