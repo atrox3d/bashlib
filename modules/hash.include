@@ -1,4 +1,10 @@
 #!/bin/bash
+################################################################################
+#
+#	questa libreria va inclusa da master.include"
+#
+################################################################################
+[ "$(type -t master_setup)" == function ] || { echo "FATAL | $BASH_SOURCE | use master.include"; exit 1; }
 ###################################################################################################################
 #
 #	modulo gestione array hash basato su riferimento indiretto
