@@ -18,7 +18,7 @@ declare -A __testhash
 #
 #	flag di debug
 #
-hashinclude_debug=false
+hashinclude_debug=true
 
 #module_load logging.include
 ###################################################################################################################
@@ -142,7 +142,7 @@ function _hash_getelement()
 		#
 		#	debug
 		#
-		$hashinclude_debug && debug"----------------------------------------------"
+		$hashinclude_debug && debug "----------------------------------------------"
 		#
 		#	false
 		#
