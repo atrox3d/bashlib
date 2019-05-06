@@ -7,6 +7,8 @@
 
 . master.include
 
+module_require logging.include
+
 lib_set a 5
 
 if val=$(_lib_get a)
