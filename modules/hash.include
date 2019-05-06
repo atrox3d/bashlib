@@ -28,7 +28,7 @@ hashinclude_debug=true
 ###################################################################################################################
 function hash_addelement()
 {
-	[ $# -ge 3 ] || { echo "ERROR | syntax $FUNCNAME hashname key val" >&2; exit 1; }
+	[ $# -ge 3 ] || { error "syntax $FUNCNAME hashname key val"; exit 1; }
 	#
 	#	debug
 	#
@@ -53,7 +53,7 @@ function hash_addelement()
 ###################################################################################################################
 function hash_haselement()
 {
-	[ $# -ge 2 ] || { echo "ERROR | syntax $FUNCNAME hashname key " >&2; exit 1; }
+	[ $# -ge 2 ] || { error "syntax $FUNCNAME hashname key"; exit 1; }
 	local elem val
 	#
 	#	debug
@@ -156,7 +156,7 @@ function _hash_getelement()
 ###################################################################################################################
 function _hash_listkeys()
 {
-	[ $# -ge 1 ] || { echo "ERROR | syntax $FUNCNAME hashname" >&2; exit 1; }
+	[ $# -ge 1 ] || { error "syntax $FUNCNAME hashname"; exit 1; }
 	#
 	#	debug
 	#
@@ -212,7 +212,7 @@ function _hash_listvalues()
 ###################################################################################################################
 function _hash_dump()
 {
-	[ $# -ge 1 ] || { echo "ERROR | syntax $FUNCNAME hashname" >&2; exit 1; }
+	[ $# -ge 1 ] || { error "syntax $FUNCNAME hashname"; exit 1; }
 	local k elem
 	#
 	#	loop over output _hash_listkeys
