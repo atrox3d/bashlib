@@ -1,0 +1,41 @@
+#!/bin/bash
+
+
+function log()
+{
+	local level=$1
+	local message="${*:2}"
+	local width=6
+	
+	level="$(printf "%-*.*s" $width $width $level)"
+	
+	echo "$level | $message"
+}
+
+function info()
+{
+	log INFO "$*"
+}
+
+function error()
+{
+	log ERROR "$*"
+}
+
+function warning()
+{
+	log WARNING "$*"
+}
+
+function fatal()
+{
+	log FATAL "$*"
+	exit 1
+}
+
+filename="$(basename $BASH_SOURCE)"
+
+info "START OF $filename"
+
+
+info "END OF $filename"
